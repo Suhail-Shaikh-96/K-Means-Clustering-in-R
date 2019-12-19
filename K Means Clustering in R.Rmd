@@ -1,0 +1,94 @@
+---
+title: "K Means Clustering"
+author: "Suhail Shaikh"
+date: "12/19/2019"
+output: html_document
+---
+
+Q.1) Use the K-means method to cluster the prospects dataset. Set the number of clusters to four. How many points are in each cluster? 
+     What are cluster means and variances?
+```{r a}
+library(xlsx)
+Data=read.xlsx("prospect.xls",sheetName="Sheet1")
+str(Data)
+
+#changing columnname of a single column
+colnames(Data)[ncol(Data)] <- "FICO" 
+
+#Converting variables to factor
+Data$MARRIED <- as.factor(Data$MARRIED)
+Data$OWNHOME <- as.factor(Data$OWNHOME)
+Data$FICO <- as.factor(Data$FICO)
+str(Data)
+
+
+DataNew <- Data
+DataNew$ID <- NULL
+DataNew$LOC <-NULL
+str(DataNew)
+summary(DataNew)
+
+#Treating na
+nrow(DataNew)
+DataNew1=na.omit(DataNew)
+nrow(DataNew1)
+#As there are only 106 rows i.e. 2% rows with na values remove them
+
+#install.packages("clustMixType")
+library(clustMixType)
+
+km4 = kproto(DataNew1, k = 4, lambda = NULL, iter.max=100, nstart=1, na.rm = TRUE, verbose = TRUE)
+km4
+
+#number of pts in each cluster
+table(km4$cluster)
+
+#Cluster means(prototype)
+km4$centers
+
+```
+
+
+Q.2) What is the best value of k for this data set?
+```{r b}
+#Check for the optimal number of clusters given the data
+wss <- (nrow(DataNew1)-1)*sum(apply(DataNew1[,c(1,2)],2,var))
+for (i in 1:15) wss[i] <- sum(kproto(DataNew1, k=i)$withinss)               #i is number of clusters   #sum adds the distance within all the clusters
+plot(1:15, wss, type="b", xlab="Number of Clusters", ylab="Within groups sum of squares",
+     main="Assessing the Optimal Number of Clusters with the Elbow Method", pch=20, cex=2)
+
+#hence the Optimal Number of Clusters with the Elbow Method is 8
+
+
+#Perform K-Means with the optimal number of clusters identified from the Elbow method
+km8 = kproto(DataNew1, k = 3, lambda = NULL, iter.max=100, nstart=1, na.rm = TRUE, verbose = TRUE)
+km8
+
+# install.packages("factoextra")
+# library(factoextra)
+# fviz_cluster(km8, geom = "point", data = DataNew1) + ggtitle("k=8")
+
+```
+
+
+Q.3) What is the Silhouette measure of the clusters obtained by best k in part (c)
+```{r c}
+# function to compute average silhouette for k clusters
+library(cluster)
+str(DataNew1)
+
+mins <- apply(DataNew1[,c(1,2)], 2, min)
+maxs <- apply(DataNew1[,c(1,2)], 2, max)
+#str(scaled_data_12)
+scaled_data_12 <- as.data.frame(scale(DataNew1[,c(1,2)], center = mins, scale = maxs- mins))   #scale() function is used for normalization
+scaled_data <- data.frame(scaled_data_12,DataNew1[,c(3,4,5,6,7)])
+str(scaled_data)
+
+#Here i have scaled the data and in question c) i have used unscaled data
+
+km8_1 = kproto(scaled_data, k = 3)#, lambda = NULL, iter.max=100, nstart=1, na.rm = TRUE, verbose = TRUE)
+km8_1
+ss <- silhouette(km8_1$cluster, dist(scaled_data))
+mean(ss[ ,3])
+```
+
